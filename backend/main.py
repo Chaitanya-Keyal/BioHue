@@ -15,12 +15,12 @@ app.add_middleware(
 app.include_router(router, prefix="/api")
 
 
-@app.get("/")
+@app.get("/ping")
 async def root():
-    return {"message": "Hello World"}
+    return {"pong": True}
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="localhost", port=8000)
+    uvicorn.run(app)
