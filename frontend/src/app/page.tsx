@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, ChangeEvent } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Moon, Sun, Camera } from "lucide-react";
@@ -97,9 +98,11 @@ export default function ImageClassifier() {
 
           {image && (
             <div className="w-full flex justify-center mt-4">
-              <img
+              <Image
                 src={URL.createObjectURL(image)}
                 alt="Thumbnail"
+                width={500}
+                height={500}
                 className="max-w-full max-h-48 object-contain rounded-lg"
               />
             </div>
