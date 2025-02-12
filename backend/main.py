@@ -15,9 +15,9 @@ app.add_middleware(
 app.include_router(router, prefix="/api")
 
 
-@app.get("/ping")
-async def root():
-    return {"pong": True}
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
