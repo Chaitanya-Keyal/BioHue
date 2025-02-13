@@ -9,6 +9,8 @@ import { Loader2, Moon, Sun, Camera } from "lucide-react";
 interface ClassificationResult {
   result: string;
   rg_ratio: number;
+  circle: string;
+  area: number;
 }
 
 export default function ImageClassifier() {
@@ -117,13 +119,24 @@ export default function ImageClassifier() {
           </Button>
 
           {result && (
-            <div className="text-center mt-4">
-              <p className="font-bold text-lg text-gray-900 dark:text-white">
-                Result: {result.result}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                RG Ratio: {result.rg_ratio.toFixed(2)}
-              </p>
+            <div className="flex flex-col md:flex-row items-center mt-4 space-y-4 md:space-y-0 md:space-x-4">
+              <div className="mt-4 md:mt-0">
+                <Image
+                  src={`data:image/png;base64,${result.circle}`}
+                  alt="Circle"
+                  width={(result.area / 100) * 500}
+                  height={(result.area / 100) * 500}
+                  className="max-w-full object-contain rounded-lg"
+                />
+              </div>
+              <div className="text-center md:text-left">
+                <p className="font-bold text-lg text-gray-900 dark:text-white">
+                  Result: {result.result}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  RG Ratio: {result.rg_ratio.toFixed(2)}
+                </p>
+              </div>
             </div>
           )}
 

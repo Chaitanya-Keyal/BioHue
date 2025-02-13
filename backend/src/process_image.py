@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 
 
-def extract_prominent_circle(image: bytes) -> cv2.typing.MatLike | None:
+def extract_prominent_circle(
+    image: bytes,
+) -> tuple[cv2.typing.MatLike | None, float | None]:
     img = cv2.imdecode(np.frombuffer(image, np.uint8), cv2.IMREAD_COLOR)
     h, w, _ = img.shape
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -24,14 +26,15 @@ def extract_prominent_circle(image: bytes) -> cv2.typing.MatLike | None:
     )
 
     if circles is None:
-        return None
+        return None, None
 
     circles = np.uint16(np.around(circles))
     x, y, radius = circles[0][0]
 
-    mask = np.zeros((h, w), dtype=np.uint8)
-    cv2.circle(mask, (x, y), radius, 255, -1)
-    extracted = cv2.bitwise_and(img, img, mask=mask)
+    mask = np.zeros((h, w, 4), dtype=np.uint8)
+    cv2.circle(mask, (x, y), radius, (255, 255, 255, 255), -1)
+    img_with_alpha = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+    extracted = cv2.bitwise_and(img_with_alpha, mask)
 
     x1, y1, x2, y2 = (
         max(x - radius, 0),
@@ -41,14 +44,17 @@ def extract_prominent_circle(image: bytes) -> cv2.typing.MatLike | None:
     )
 
     circle = extracted[y1:y2, x1:x2]
-    cv2.imwrite("detected_circle.png", circle)
 
-    return circle
+    circle_area = np.pi * (radius**2)
+    image_area = h * w
+    percent_circle = (circle_area / image_area) * 100
+
+    return circle, percent_circle
 
 
 def compute_rg_ratio(image: cv2.typing.MatLike) -> float:
     image = image.astype(np.float32)
-    b, g, r = cv2.split(image)
+    b, g, r, a = cv2.split(image)
     g[g == 0] = 1  # Avoid division by zero
     return float(np.mean(r) / np.mean(g))
 
