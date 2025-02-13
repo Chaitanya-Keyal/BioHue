@@ -22,16 +22,14 @@ export default function ImageClassifier() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const isDarkMode = localStorage.getItem("darkMode") === "true";
-    setDarkMode(isDarkMode);
-    document.documentElement.classList.toggle("dark", isDarkMode);
+    setDarkMode(true);
+    document.documentElement.classList.add("dark");
   }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     document.documentElement.classList.toggle("dark", newDarkMode);
-    localStorage.setItem("darkMode", String(newDarkMode));
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
