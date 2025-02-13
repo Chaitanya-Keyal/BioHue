@@ -9,8 +9,8 @@ def extract_prominent_circle(image: bytes) -> cv2.typing.MatLike | None:
 
     blurred = cv2.GaussianBlur(gray, (9, 9), 2)
 
-    min_radius = int(np.sqrt(0.1 * (h * w / np.pi)))  # Minimum 10% of image area
-    max_radius = int(np.sqrt(0.6 * (h * w / np.pi)))  # Maximum 60% of image area
+    min_radius = int(np.sqrt(0.025 * (h * w / np.pi)))  # Minimum 2.5% of image area
+    max_radius = int(np.sqrt(0.75 * (h * w / np.pi)))  # Maximum 75% of image area
 
     circles = cv2.HoughCircles(
         blurred,
