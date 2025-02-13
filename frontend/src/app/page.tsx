@@ -92,7 +92,6 @@ export default function ImageClassifier() {
               accept="image/*"
               onChange={handleFileChange}
               className="hidden"
-              capture="environment"
             />
           </label>
 
