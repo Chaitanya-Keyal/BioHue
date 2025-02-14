@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { useToast } from "@/components/hooks/use-toast";
 export default function Gallery() {
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -49,6 +50,14 @@ export default function Gallery() {
           throw new Error(data.detail || "Error fetching images");
         }
         const data = await res.json();
+        if (data.length === 0) {
+          toast({
+            title: "No History",
+            description: "Upload an image to get started!",
+          });
+          router.push("/");
+          return;
+        }
         setImages(data);
       } catch (err: any) {
         toast({
@@ -63,6 +72,33 @@ export default function Gallery() {
 
     fetchImages();
   }, [user, router, toast]);
+
+  const handleDelete = async (imageId: string) => {
+    setDeleting(imageId);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/images/${imageId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Error deleting image");
+      }
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+      toast({ title: "Deleted", description: "Image deleted successfully" });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const shouldRender = useMemo(() => {
     return !checkingAuth && user;
@@ -86,15 +122,25 @@ export default function Gallery() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {images.map((img) => (
           <Card
             key={img.id}
             id={`image-${img.id}`}
-            className={`bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md ${
+            className={`relative bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md ${
               hash === `#image-${img.id}` ? "animate-flash" : ""
             }`}
           >
+            <button
+              onClick={() => handleDelete(img.id)}
+              className="absolute top-2 right-2 p-1 text-white rounded-full transition-colors duration-200 ease-in hover:bg-red-600"
+            >
+              {deleting === img.id ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Trash2 size={16} />
+              )}
+            </button>
             <CardContent className="flex flex-col space-y-4 items-center">
               {img.original_image?.base64 ? (
                 <Image

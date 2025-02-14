@@ -8,7 +8,7 @@ from typing import List
 import cv2
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from src.database import Analysis, File, Image, User, fs, images_collection
 from src.process_image import (
     classify_result,
@@ -125,3 +125,27 @@ async def get_images(user: User = Depends(get_current_user)):
             for image in images_with_data
         ]
     )
+
+
+@router.delete("/{image_id}")
+async def delete_image(image_id: str, user: User = Depends(get_current_user)):
+    image = await images_collection.find_one({"_id": image_id})
+    if not image:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Image not found",
+        )
+
+    if image["user_id"] != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to delete this image",
+        )
+
+    image = Image(**image)
+    await images_collection.delete_one({"_id": image_id})
+    await fs.delete(ObjectId(image.original_image.id))
+    if image.processed_image:
+        await fs.delete(ObjectId(image.processed_image.id))
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
