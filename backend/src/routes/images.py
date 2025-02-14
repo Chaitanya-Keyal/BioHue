@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import io
 import traceback
 from datetime import datetime
@@ -24,6 +25,19 @@ async def upload_image(image: UploadFile, user: User = Depends(get_current_user)
     try:
         contents = await image.read()
 
+        md5_hash = hashlib.md5(contents).hexdigest()
+        existing_image = await images_collection.find_one(
+            {"md5_hash": md5_hash, "user_id": user.id}
+        )
+        if existing_image:
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={
+                    "detail": "Image already exists",
+                    "image_id": str(existing_image["_id"]),
+                },
+            )
+
         circle, area = extract_prominent_circle(contents)
         if circle is None or area is None:
             raise HTTPException(
@@ -45,6 +59,7 @@ async def upload_image(image: UploadFile, user: User = Depends(get_current_user)
 
         image_data = Image(
             user_id=user.id,
+            md5_hash=md5_hash,
             original_image=File(_id=str(original_image_id)),
             processed_image=File(_id=str(processed_image_id)),
             processed_image_area=area,
@@ -67,6 +82,8 @@ async def upload_image(image: UploadFile, user: User = Depends(get_current_user)
             image_data.model_dump(mode="json", exclude={"original_image", "user_id"})
         )
 
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(

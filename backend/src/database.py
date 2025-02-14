@@ -44,6 +44,7 @@ class File(BaseModel):
 class Image(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
     user_id: str
+    md5_hash: str
     original_image: File
     processed_image: Optional[File] = None
     processed_image_area: Optional[float] = None
