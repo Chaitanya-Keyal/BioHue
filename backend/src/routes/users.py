@@ -2,7 +2,7 @@ import json
 import secrets
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from itsdangerous import BadSignature, TimestampSigner
 from passlib.context import CryptContext
@@ -30,6 +30,38 @@ def JSONResponseWithCookie(session: Session, *args, **kwargs):
         samesite="lax",
     )
     return response
+
+
+async def get_current_user(request: Request):
+    session_cookie = request.cookies.get(SESSION_COOKIE_NAME)
+    if not session_cookie:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        unsigned_data = signer.unsign(session_cookie)
+        session = Session(**json.loads(unsigned_data))
+    except (BadSignature, json.JSONDecodeError):
+        raise HTTPException(status_code=401, detail="Invalid session data")
+
+    db_session = await sessions_collection.find_one(
+        {
+            "_id": session.id,
+            "username": session.username,
+        }
+    )
+    if not db_session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db_session = Session(**db_session)
+    if db_session.created_at + timedelta(days=1) < datetime.now():
+        await sessions_collection.delete_one({"_id": db_session.id})
+        raise HTTPException(status_code=401, detail="Session expired")
+
+    user = await users_collection.find_one({"username": session.username})
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return User(**user)
 
 
 @router.post("/register")
@@ -69,43 +101,8 @@ async def login(user: User):
 
 
 @router.post("/logout")
-async def logout(request: Request):
-    session = request.cookies.get(SESSION_COOKIE_NAME)
-    if session:
-        session = Session(**json.loads(session))
-        await sessions_collection.delete_one({"_id": session.id})
+async def logout(request: Request, user: User = Depends(get_current_user)):
+    await sessions_collection.delete_many({"username": user.username})
     response = JSONResponse(content={"message": "Logged out"})
     response.delete_cookie(SESSION_COOKIE_NAME)
     return response
-
-
-async def get_current_user(request: Request):
-    session_cookie = request.cookies.get(SESSION_COOKIE_NAME)
-    if not session_cookie:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        unsigned_data = signer.unsign(session_cookie)
-        session = Session(**json.loads(unsigned_data))
-    except (BadSignature, json.JSONDecodeError):
-        raise HTTPException(status_code=401, detail="Invalid session data")
-
-    db_session = await sessions_collection.find_one(
-        {
-            "_id": session.id,
-            "username": session.username,
-        }
-    )
-    if not db_session:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    db_session = Session(**db_session)
-    if db_session.created_at + timedelta(days=1) < datetime.now():
-        await sessions_collection.delete_one({"_id": db_session.id})
-        raise HTTPException(status_code=401, detail="Session expired")
-
-    user = await users_collection.find_one({"username": session.username})
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    return User(**user)
