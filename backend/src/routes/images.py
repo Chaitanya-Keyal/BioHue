@@ -47,6 +47,7 @@ async def upload_image(image: UploadFile, user: User = Depends(get_current_user)
             user_id=user.id,
             original_image=File(_id=str(original_image_id)),
             processed_image=File(_id=str(processed_image_id)),
+            processed_image_area=area,
             analysis=analysis,
             created_at=datetime.now(),
         )

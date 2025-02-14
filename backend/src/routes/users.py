@@ -1,14 +1,14 @@
 import json
-import secrets
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from itsdangerous import BadSignature, TimestampSigner
 from passlib.context import CryptContext
+from src.config import settings
 from src.database import Session, User, sessions_collection, users_collection
 
-SECRET_KEY = secrets.token_hex(32)
+SECRET_KEY = settings.SECRET_KEY
 SESSION_COOKIE_NAME = "session"
 
 router = APIRouter()
@@ -22,7 +22,7 @@ def JSONResponseWithCookie(session: Session, *args, **kwargs):
 
     signed_cookie = signer.sign(
         json.dumps(session.model_dump(mode="json", by_alias=True))
-    )
+    ).decode()
     response.set_cookie(
         SESSION_COOKIE_NAME,
         signed_cookie,
@@ -38,7 +38,7 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
-        unsigned_data = signer.unsign(session_cookie)
+        unsigned_data = signer.unsign(session_cookie).decode()
         session = Session(**json.loads(unsigned_data))
     except (BadSignature, json.JSONDecodeError):
         raise HTTPException(status_code=401, detail="Invalid session data")
@@ -98,6 +98,11 @@ async def login(user: User):
         session,
         content={"message": "Logged in"},
     )
+
+
+@router.get("/me")
+async def me(user: User = Depends(get_current_user)):
+    return JSONResponse(user.model_dump(mode="json", exclude={"password"}))
 
 
 @router.post("/logout")

@@ -38,7 +38,7 @@ class Analysis(BaseModel):
 
 class File(BaseModel):
     id: str = Field(..., alias="_id")
-    base64: Optional[str]
+    base64: Optional[str] = None
 
 
 class Image(BaseModel):
@@ -46,5 +46,6 @@ class Image(BaseModel):
     user_id: str
     original_image: File
     processed_image: Optional[File] = None
+    processed_image_area: Optional[float] = None
     analysis: Optional[Analysis] = None
     created_at: datetime = Field(default_factory=datetime.now)
