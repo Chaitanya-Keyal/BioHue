@@ -56,6 +56,18 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      animation: {
+        flash: "flash 2s ease-in-out",
+      },
+      keyframes: {
+        flash: {
+          "0%": { opacity: "1" },
+          "25%": { opacity: "0.5" },
+          "50%": { opacity: "1" },
+          "75%": { opacity: "0.5" },
+          "100%": { opacity: "1" },
+        },
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
