@@ -1,5 +1,4 @@
 import json
-from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -26,8 +25,7 @@ def JSONResponseWithCookie(session: Session, *args, **kwargs):
     response.set_cookie(
         SESSION_COOKIE_NAME,
         signed_cookie,
-        httponly=True,
-        samesite="lax",
+        max_age=60 * 60 * 24,
     )
     return response
 
@@ -38,7 +36,7 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
-        unsigned_data = signer.unsign(session_cookie).decode()
+        unsigned_data = signer.unsign(session_cookie, max_age=60 * 60 * 24).decode()
         session = Session(**json.loads(unsigned_data))
     except (BadSignature, json.JSONDecodeError):
         raise HTTPException(status_code=401, detail="Invalid session data")
@@ -51,11 +49,6 @@ async def get_current_user(request: Request):
     )
     if not db_session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-
-    db_session = Session(**db_session)
-    if db_session.created_at + timedelta(days=1) < datetime.now():
-        await sessions_collection.delete_one({"_id": db_session.id})
-        raise HTTPException(status_code=401, detail="Session expired")
 
     user = await users_collection.find_one({"username": session.username})
     if not user:
@@ -87,8 +80,10 @@ async def register(user: User):
 @router.post("/login")
 async def login(user: User):
     db_user = await users_collection.find_one({"username": user.username})
-    if not db_user or not pwd_context.verify(user.password, db_user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not pwd_context.verify(user.password, db_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid password")
 
     session = Session(username=user.username)
     await sessions_collection.delete_many({"username": user.username})
