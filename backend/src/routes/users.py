@@ -61,7 +61,11 @@ async def get_current_user(request: Request):
 async def register(user: User):
     existing_user = await users_collection.find_one({"username": user.username})
     if existing_user:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        return JSONResponse(
+            content={"detail": "User already exists"},
+            status_code=status.HTTP_409_CONFLICT,
+            headers={"WWW-Authenticate": "Bearer realm='Login required'"},
+        )
 
     hashed_password = pwd_context.hash(user.password)
     user.password = hashed_password
@@ -81,9 +85,17 @@ async def register(user: User):
 async def login(user: User):
     db_user = await users_collection.find_one({"username": user.username})
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return JSONResponse(
+            content={"detail": "User not found"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer realm='Login required'"},
+        )
     if not pwd_context.verify(user.password, db_user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid password")
+        return JSONResponse(
+            content={"detail": "Invalid password"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer realm='Login required'"},
+        )
 
     session = Session(username=user.username)
     await sessions_collection.delete_many({"username": user.username})
