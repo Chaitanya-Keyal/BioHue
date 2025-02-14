@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Image Analysis",
-  description: "Analyse RG ratio of an image",
+  title: "BioHue",
+  description: "Real-time infection monitoring",
 };
 
 export default function RootLayout({
