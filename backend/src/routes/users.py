@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
+from itsdangerous import BadSignature, TimestampSigner
 from passlib.context import CryptContext
 from src.database import Session, User, sessions_collection, users_collection
 
@@ -13,6 +14,22 @@ SESSION_COOKIE_NAME = "session"
 router = APIRouter()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+signer = TimestampSigner(SECRET_KEY)
+
+
+def JSONResponseWithCookie(session: Session, *args, **kwargs):
+    response = JSONResponse(*args, **kwargs)
+
+    signed_cookie = signer.sign(
+        json.dumps(session.model_dump(mode="json", by_alias=True))
+    )
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        signed_cookie,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
 
 
 @router.post("/register")
@@ -28,15 +45,11 @@ async def register(user: User):
     session = Session(username=user.username)
     await sessions_collection.insert_one(session.model_dump(by_alias=True))
 
-    response = JSONResponse(
+    return JSONResponseWithCookie(
+        session,
         content={"message": "User created"},
         status_code=status.HTTP_201_CREATED,
     )
-    response.set_cookie(
-        SESSION_COOKIE_NAME,
-        json.dumps(session.model_dump(by_alias=True)),
-    )
-    return response
 
 
 @router.post("/login")
@@ -49,12 +62,10 @@ async def login(user: User):
     await sessions_collection.delete_many({"username": user.username})
     await sessions_collection.insert_one(session.model_dump(by_alias=True))
 
-    response = JSONResponse(content={"message": "Logged in"})
-    response.set_cookie(
-        SESSION_COOKIE_NAME,
-        json.dumps(session.model_dump(mode="json", by_alias=True)),
+    return JSONResponseWithCookie(
+        session,
+        content={"message": "Logged in"},
     )
-    return response
 
 
 @router.post("/logout")
@@ -74,8 +85,9 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
-        session = Session(**json.loads(session_cookie))
-    except json.JSONDecodeError:
+        unsigned_data = signer.unsign(session_cookie)
+        session = Session(**json.loads(unsigned_data))
+    except (BadSignature, json.JSONDecodeError):
         raise HTTPException(status_code=401, detail="Invalid session data")
 
     db_session = await sessions_collection.find_one(
