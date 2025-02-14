@@ -6,14 +6,16 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/components/hooks/use-toast";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const { user, login } = useAuth();
+  const { toast } = useToast();
+
   const router = useRouter();
 
   useEffect(() => {
@@ -24,7 +26,16 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+
+    if (password.length < 8) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     const endpoint = isLogin
       ? `${backendUrl}/api/users/login`
@@ -45,13 +56,18 @@ export default function AuthPage() {
         }
 
         login({ username });
+        toast({
+          title: isLogin ? "Login successful" : "Registration successful",
+          description: `Welcome, ${username}!`,
+          duration: 2500,
+        });
         router.push("/");
       } catch (err: any) {
-        if (err.message === "Failed to fetch") {
-          console.warn("Retrying login due to fetch failure...");
-          return request(); // Retry once
-        }
-        setError(err.message);
+        toast({
+          title: isLogin ? "Login failed" : "Registration failed",
+          description: err.message,
+          variant: "destructive",
+        });
       }
     };
 
@@ -65,7 +81,6 @@ export default function AuthPage() {
           <h2 className="text-3xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">
             {isLogin ? "Login" : "Register"}
           </h2>
-          {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block mb-2 text-gray-700 dark:text-gray-300">

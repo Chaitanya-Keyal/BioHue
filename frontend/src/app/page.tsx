@@ -8,16 +8,17 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { ImageData } from "@/types";
+import { useToast } from "@/components/hooks/use-toast";
 
 export default function HomePage() {
   const [image, setImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [result, setResult] = useState<ImageData | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user === undefined) return;
@@ -44,7 +45,6 @@ export default function HomePage() {
     if (file) {
       setImage(file);
       setResult(null);
-      setError(null);
     }
   };
 
@@ -52,7 +52,6 @@ export default function HomePage() {
     if (!image) return;
 
     setLoading(true);
-    setError(null);
     setResult(null);
 
     const formData = new FormData();
@@ -71,28 +70,11 @@ export default function HomePage() {
       const data = await response.json();
       if (!response.ok) {
         if (response.status === 409 && data.image_id) {
+          toast({
+            title: "Image already processed",
+            description: "Redirecting to the processed image",
+          });
           router.push(`/history#image-${data.image_id}`);
-          setTimeout(() => {
-            const alertBox = document.createElement("div");
-            alertBox.textContent = "Image already exists!";
-            alertBox.className =
-              "fixed top-5 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg opacity-0 transition-opacity duration-500 ease-in-out z-50";
-            document.body.appendChild(alertBox);
-
-            requestAnimationFrame(() => {
-              alertBox.classList.remove("opacity-0");
-              alertBox.classList.add("opacity-100");
-            });
-
-            setTimeout(() => {
-              alertBox.classList.remove("opacity-100");
-              alertBox.classList.add("opacity-0");
-
-              setTimeout(() => {
-                document.body.removeChild(alertBox);
-              }, 500);
-            }, 2000);
-          }, 500);
         } else {
           throw new Error(data.detail || "Error uploading image");
         }
@@ -100,7 +82,11 @@ export default function HomePage() {
         setResult(data);
       }
     } catch (err: any) {
-      setError(err.message);
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -165,8 +151,6 @@ export default function HomePage() {
                 </div>
               </div>
             )}
-
-          {error && <p className="text-red-500 mt-2">{error}</p>}
         </CardContent>
       </Card>
     </div>

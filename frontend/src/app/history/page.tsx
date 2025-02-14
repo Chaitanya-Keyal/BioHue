@@ -7,13 +7,14 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { ImageData } from "@/types";
+import { useToast } from "@/components/hooks/use-toast";
 
 export default function Gallery() {
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { user } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
 
   const [hash, setHash] = useState<string | null>(null);
@@ -35,7 +36,6 @@ export default function Gallery() {
     setCheckingAuth(false);
     const fetchImages = async () => {
       setLoading(true);
-      setError(null);
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/images`,
@@ -51,14 +51,18 @@ export default function Gallery() {
         const data = await res.json();
         setImages(data);
       } catch (err: any) {
-        setError(err.message);
+        toast({
+          title: "Error",
+          description: err.message,
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchImages();
-  }, [user, router]);
+  }, [user, router, toast]);
 
   const shouldRender = useMemo(() => {
     return !checkingAuth && user;
@@ -81,7 +85,6 @@ export default function Gallery() {
           <Loader2 className="animate-spin" />
         </div>
       )}
-      {error && <p className="text-red-500 text-center">{error}</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ">
         {images.map((img) => (
