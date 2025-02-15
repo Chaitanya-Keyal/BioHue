@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
-import { Loader2, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
-import { ImageData } from "@/types";
 import { useToast } from "@/components/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/context/AuthContext";
+import { ImageData } from "@/types";
+import { Loader2, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Gallery() {
   const [images, setImages] = useState<ImageData[]>([]);
@@ -59,10 +59,10 @@ export default function Gallery() {
           return;
         }
         setImages(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast({
           title: "Error",
-          description: err.message,
+          description: (err as Error).message,
           variant: "destructive",
         });
       } finally {
@@ -88,11 +88,15 @@ export default function Gallery() {
         throw new Error(data.detail || "Error deleting image");
       }
       setImages((prev) => prev.filter((img) => img.id !== imageId));
-      toast({ title: "Deleted", description: "Image deleted successfully" });
-    } catch (err: any) {
+      toast({
+        title: "Deleted",
+        description: "Image deleted successfully",
+        duration: 2000,
+      });
+    } catch (err: unknown) {
       toast({
         title: "Error",
-        description: err.message,
+        description: (err as Error).message,
         variant: "destructive",
       });
     } finally {
@@ -112,10 +116,7 @@ export default function Gallery() {
     );
   }
   return (
-    <div className="min-h-screen p-4 bg-gray-100 dark:bg-gray-900">
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-900 dark:text-white">
-        Your Uploaded Images
-      </h1>
+    <div className="min-h-screen p-4 bg-gray-100 dark:bg-gray-900 mt-16">
       {loading && (
         <div className="flex justify-center">
           <Loader2 className="animate-spin" />
@@ -127,13 +128,12 @@ export default function Gallery() {
           <Card
             key={img.id}
             id={`image-${img.id}`}
-            className={`relative bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md ${
-              hash === `#image-${img.id}` ? "animate-flash" : ""
-            }`}
+            className={`relative bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md
+              ${hash === `#image-${img.id}` ? "animate-flash" : ""}`}
           >
             <button
               onClick={() => handleDelete(img.id)}
-              className="absolute top-2 right-2 p-1 text-white rounded-full transition-colors duration-200 ease-in hover:bg-red-600"
+              className="absolute top-2 right-2 p-1 text-gray-600 dark:text-gray-300 rounded-full transition-colors duration-200 ease-in hover:bg-red-600"
             >
               {deleting === img.id ? (
                 <Loader2 className="animate-spin" size={16} />
@@ -161,12 +161,12 @@ export default function Gallery() {
                     alt="Processed"
                     width={
                       img.processed_image_area
-                        ? img.processed_image_area * 5
+                        ? img.processed_image_area * 5.5
                         : 250
                     }
                     height={
                       img.processed_image_area
-                        ? img.processed_image_area * 5
+                        ? img.processed_image_area * 5.5
                         : 250
                     }
                     className="object-contain rounded-lg mb-4 md:mb-0"
@@ -181,7 +181,7 @@ export default function Gallery() {
                       Result: {img.analysis.result}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      RG Ratio: {img.analysis.value.toFixed(2)}
+                      Value: {img.analysis.value.toFixed(2)}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
                       Substrate: {img.analysis.substrate}

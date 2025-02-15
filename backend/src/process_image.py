@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from src.config import Thresholds
 
 
 def extract_prominent_circle(
@@ -52,17 +53,27 @@ def extract_prominent_circle(
     return circle, percent_circle
 
 
-def compute_rg_ratio(image: cv2.typing.MatLike) -> float:
+def compute_metric(image: cv2.typing.MatLike, expression: str) -> float:
     image = image.astype(np.float32)
-    b, g, r, a = cv2.split(image)
-    g[g == 0] = 1  # Avoid division by zero
-    return float(np.mean(r) / np.mean(g))
+    b, g, r, _ = cv2.split(image)
+
+    # Avoid division by zero
+    g = np.where(g == 0, 1, g)
+    b = np.where(b == 0, 1, b)
+    r = np.where(r == 0, 1, r)
+
+    return float(
+        eval(
+            expression.strip().lower(),
+            {"r": np.mean(r), "g": np.mean(g), "b": np.mean(b)},
+        )
+    )
 
 
-def classify_result(rg_ratio: float) -> str:
-    if rg_ratio < 1.5:
+def classify_result(value: float, thresholds: Thresholds) -> str:
+    if value < thresholds.negative:
         return "Negative"
-    elif rg_ratio > 2:
+    elif value > thresholds.positive:
         return "Positive"
     else:
         return "Moderate"

@@ -1,36 +1,77 @@
 "use client";
 
+import { useToast } from "@/components/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
+import { ImageData } from "@/types";
 import { Camera, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { ImageData } from "@/types";
-import { useToast } from "@/components/hooks/use-toast";
 
 export default function HomePage() {
   const [image, setImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-
   const [result, setResult] = useState<ImageData | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const router = useRouter();
+  const [substrates, setSubstrates] = useState<string[]>([]);
+  const [selectedSubstrate, setSelectedSubstrate] = useState<string>("");
   const { user } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
-
   useEffect(() => {
     if (user === undefined) return;
     if (!user) {
       router.push("/auth");
+    } else {
+      const fetchSubstrates = async () => {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/substrates`,
+          );
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.detail || "Error fetching substrates");
+          }
+          if (
+            Array.isArray(data) &&
+            data.every((substrate) => typeof substrate === "string")
+          ) {
+            if (data.length > 0) {
+              setSubstrates(data);
+              setSelectedSubstrate(data[0]);
+            } else {
+              throw new Error("No substrates available");
+            }
+          } else {
+            throw new Error("Invalid data format");
+          }
+        } catch (err: unknown) {
+          toast({
+            title: "Error",
+            description: (err as Error).message,
+            variant: "destructive",
+          });
+        }
+      };
+
+      fetchSubstrates();
     }
     setCheckingAuth(false);
-  }, [user, router]);
+  }, [user, router, toast]);
 
-  const shouldRender = useMemo(() => {
-    return !checkingAuth && user;
-  }, [checkingAuth, user]);
+  const shouldRender = useMemo(
+    () => !checkingAuth && user,
+    [checkingAuth, user],
+  );
 
   if (!shouldRender) {
     return (
@@ -50,12 +91,21 @@ export default function HomePage() {
 
   const handleUpload = async () => {
     if (!image) return;
+    if (!selectedSubstrate) {
+      toast({
+        title: "Error",
+        description: "No substrate selected",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     setResult(null);
 
     const formData = new FormData();
     formData.append("image", image as unknown as Blob);
+    formData.append("substrate", selectedSubstrate);
 
     try {
       const response = await fetch(
@@ -71,8 +121,9 @@ export default function HomePage() {
       if (!response.ok) {
         if (response.status === 409 && data.image_id) {
           toast({
-            title: "Image already processed",
-            description: "Redirecting to the processed image",
+            title: data.detail || "This request has already been processed",
+            description: "Redirecting to the result",
+            duration: 3000,
           });
           router.push(`/history#image-${data.image_id}`);
         } else {
@@ -81,10 +132,10 @@ export default function HomePage() {
       } else {
         setResult(data);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: "Error",
-        description: err.message,
+        description: (err as Error).message,
         variant: "destructive",
       });
     } finally {
@@ -94,11 +145,34 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors p-4">
-      <Card className="w-full max-w-lg p-6 shadow-lg bg-white dark:bg-gray-800 rounded-xl transform transition-transform hover:scale-105">
+      <Card className="w-full max-w-lg p-6 shadow-lg bg-white dark:bg-gray-800 rounded-xl transform transition-transform">
         <CardContent className="flex flex-col items-center space-y-6">
+          <div className="w-full flex flex-col md:flex-row items-center mb-2">
+            <label className="text-lg font-semibold text-gray-700 dark:text-gray-300 mr-4 mb-2 md:mb-0">
+              Select Substrate
+            </label>
+            <div className="flex-grow">
+              <Select
+                value={selectedSubstrate}
+                onValueChange={(value) => setSelectedSubstrate(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {substrates.map((substrate) => (
+                    <SelectItem key={substrate} value={substrate}>
+                      {substrate}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <label className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg cursor-pointer hover:bg-blue-500 dark:hover:bg-blue-600 transition-colors">
             <Camera className="w-6 h-6 mr-2" />
-            <span className="text-lg">Upload an Image</span>
+            <span className="text-lg">Upload Image</span>
             <input
               type="file"
               accept="image/*"
@@ -124,7 +198,7 @@ export default function HomePage() {
             disabled={loading || !image}
             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors mt-4 text-lg"
           >
-            {loading ? <Loader2 className="animate-spin" /> : "Classify"}
+            {loading ? <Loader2 className="animate-spin" /> : "Get Result"}
           </Button>
 
           {result &&
@@ -146,7 +220,7 @@ export default function HomePage() {
                     Result: {result.analysis.result}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    RG Ratio: {result.analysis.value.toFixed(2)}
+                    Value: {result.analysis.value.toFixed(2)}
                   </p>
                 </div>
               </div>

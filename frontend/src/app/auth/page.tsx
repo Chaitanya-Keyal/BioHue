@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
-import { useToast } from "@/components/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -62,10 +62,10 @@ export default function AuthPage() {
           duration: 2500,
         });
         router.push("/");
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast({
           title: isLogin ? "Login failed" : "Registration failed",
-          description: err.message,
+          description: (err as Error).message,
           variant: "destructive",
         });
       }
@@ -76,7 +76,7 @@ export default function AuthPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md p-8 shadow-lg bg-white dark:bg-gray-800 rounded-xl transform transition-transform hover:scale-105">
+      <Card className="w-full max-w-md p-8 shadow-lg bg-white dark:bg-gray-800 rounded-xl transform transition-transform">
         <CardContent>
           <h2 className="text-3xl font-bold mb-6 text-center text-gray-900 dark:text-gray-100">
             {isLogin ? "Login" : "Register"}

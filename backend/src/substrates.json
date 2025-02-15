@@ -1,0 +1,9 @@
+{
+  "CPRG": {
+    "expression": "r / g",
+    "thresholds": {
+      "negative": 1.5,
+      "positive": 2.0
+    }
+  }
+}

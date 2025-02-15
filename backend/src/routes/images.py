@@ -7,33 +7,46 @@ from typing import List
 
 import cv2
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse, Response
+from src.config import settings
 from src.database import Analysis, File, Image, User, fs, images_collection
-from src.process_image import (
-    classify_result,
-    compute_rg_ratio,
-    extract_prominent_circle,
-)
+from src.process_image import classify_result, compute_metric, extract_prominent_circle
 from src.routes.users import get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/images")
+
+SUBSTRATES_CONFIG = settings.substrates
 
 
 @router.post("")
-async def upload_image(image: UploadFile, user: User = Depends(get_current_user)):
+async def upload_image(
+    image: UploadFile,
+    substrate: str = Form(...),
+    user: User = Depends(get_current_user),
+):
     try:
+        if substrate not in SUBSTRATES_CONFIG:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid substrate",
+            )
+
         contents = await image.read()
 
         md5_hash = hashlib.md5(contents).hexdigest()
         existing_image = await images_collection.find_one(
-            {"md5_hash": md5_hash, "user_id": user.id}
+            {
+                "md5_hash": md5_hash,
+                "user_id": user.id,
+                "analysis.substrate": substrate,
+            }
         )
         if existing_image:
             return JSONResponse(
                 status_code=status.HTTP_409_CONFLICT,
                 content={
-                    "detail": "Image already exists",
+                    "detail": "This request has already been processed",
                     "image_id": str(existing_image["_id"]),
                 },
             )
@@ -45,8 +58,11 @@ async def upload_image(image: UploadFile, user: User = Depends(get_current_user)
                 detail="No prominent circle detected in the image",
             )
 
-        rg_ratio = compute_rg_ratio(circle)
-        result = classify_result(rg_ratio)
+        try:
+            value = compute_metric(circle, SUBSTRATES_CONFIG[substrate].expression)
+            result = classify_result(value, SUBSTRATES_CONFIG[substrate].thresholds)
+        except Exception as e:
+            raise Exception(f"Error in substrate's configuration: {str(e)}")
 
         _, circle_buffer = cv2.imencode(".png", circle)
 
@@ -55,7 +71,7 @@ async def upload_image(image: UploadFile, user: User = Depends(get_current_user)
             f"processed_{image.filename}", circle_buffer.tobytes()
         )
 
-        analysis = Analysis(substrate="CPRG", value=rg_ratio, result=result)
+        analysis = Analysis(substrate=substrate, value=value, result=result)
 
         image_data = Image(
             user_id=user.id,

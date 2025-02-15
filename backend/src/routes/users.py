@@ -10,7 +10,7 @@ from src.database import Session, User, sessions_collection, users_collection
 SECRET_KEY = settings.SECRET_KEY
 SESSION_COOKIE_NAME = "session"
 
-router = APIRouter()
+router = APIRouter(prefix="/users")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 signer = TimestampSigner(SECRET_KEY)
@@ -26,6 +26,8 @@ def JSONResponseWithCookie(session: Session, *args, **kwargs):
         SESSION_COOKIE_NAME,
         signed_cookie,
         max_age=60 * 60 * 24,
+        httponly=True,
+        secure=settings.ENV == settings.PROD_ENV,
     )
     return response
 
