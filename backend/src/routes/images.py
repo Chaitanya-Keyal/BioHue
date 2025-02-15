@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse, Response
 from src.config import settings
 from src.database import Analysis, File, Image, User, fs, images_collection
-from src.process_image import classify_result, compute_metric, extract_prominent_circle
+from src.process_image import classify_result, compute_metric, extract_prominent_region
 from src.routes.users import get_current_user
 
 router = APIRouter(prefix="/images")
@@ -51,24 +51,24 @@ async def upload_image(
                 },
             )
 
-        circle, area = extract_prominent_circle(contents)
-        if circle is None or area is None:
+        region, area = extract_prominent_region(contents)
+        if region is None or area is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No prominent circle detected in the image",
             )
 
         try:
-            value = compute_metric(circle, SUBSTRATES_CONFIG[substrate].expression)
+            value = compute_metric(region, SUBSTRATES_CONFIG[substrate].expression)
             result = classify_result(value, SUBSTRATES_CONFIG[substrate].thresholds)
         except Exception as e:
             raise Exception(f"Error in substrate's configuration: {str(e)}")
 
-        _, circle_buffer = cv2.imencode(".png", circle)
+        _, region_buffer = cv2.imencode(".png", region)
 
         original_image_id = await fs.upload_from_stream(image.filename, contents)
         processed_image_id = await fs.upload_from_stream(
-            f"processed_{image.filename}", circle_buffer.tobytes()
+            f"processed_{image.filename}", region_buffer.tobytes()
         )
 
         analysis = Analysis(substrate=substrate, value=value, result=result)
@@ -91,7 +91,7 @@ async def upload_image(
         )
 
         image_data.processed_image.base64 = base64.b64encode(
-            circle_buffer.tobytes()
+            region_buffer.tobytes()
         ).decode()
 
         return JSONResponse(
