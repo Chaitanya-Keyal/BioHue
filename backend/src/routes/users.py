@@ -28,6 +28,7 @@ def JSONResponseWithCookie(session: Session, *args, **kwargs):
         max_age=60 * 60 * 24,
         httponly=True,
         secure=settings.ENV == settings.PROD_ENV,
+        samesite=None if settings.ENV == settings.PROD_ENV else "lax",
     )
     return response
 

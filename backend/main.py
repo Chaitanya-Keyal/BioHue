@@ -8,7 +8,6 @@ app = FastAPI()
 prod_cors_origins = [
     "https://bio-hue.vercel.app",
     "https://*.vercel.app",
-    "https://vercel.app",
 ]
 
 local_cors_origins = ["http://localhost:3000"]
