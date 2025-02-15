@@ -1,12 +1,5 @@
-.env
-
 .vscode/
 
-__pycache__/
+*.env
 
-node_modules/
-.next/
-next-env.d.ts
-build/
-
-detected_circle.png
+.cache/
