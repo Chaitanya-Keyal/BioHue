@@ -1,4 +1,4 @@
-name: Lint code and check formatting with black and isort
+name: Lint code and check formatting with black, isort, and ESLint (Husky)
 
 on:
   pull_request:
@@ -40,3 +40,30 @@ jobs:
       - name: Run pre-commit
         run: |
           pre-commit run --show-diff-on-failure --color=always
+
+  eslint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set up Husky
+        run: |
+          npm exec husky install
+          chmod +x .husky/pre-commit
+
+      - name: Run Husky pre-commit hooks
+        run: HUSKY=1 npx --no-install husky-run pre-commit
+
+      - name: Run ESLint
+        run: npx eslint . --ext .ts,.tsx --max-warnings=0
