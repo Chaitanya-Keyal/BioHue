@@ -50,8 +50,8 @@ async def upload_image(
                 },
             )
 
-        region, area = extract_prominent_region(contents)
-        if region is None or area is None:
+        region = extract_prominent_region(contents)
+        if region is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No prominent circle detected in the image",
@@ -82,7 +82,6 @@ async def upload_image(
             md5_hash=md5_hash,
             original_image=File(_id=str(original_image_id)),
             processed_image=File(_id=str(processed_image_id)),
-            processed_image_area=area,
             analysis=analysis,
         )
 

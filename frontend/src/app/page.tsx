@@ -201,33 +201,30 @@ export default function HomePage() {
             {loading ? <Loader2 className="animate-spin" /> : "Get Result"}
           </Button>
 
-          {result &&
-            result.processed_image &&
-            result.processed_image_area &&
-            result.analysis && (
-              <div className="flex flex-col md:flex-row items-center mt-4 space-y-4 md:space-y-0 md:space-x-4">
-                <div className="mt-4 md:mt-0">
-                  <Image
-                    src={`data:image/png;base64,${result.processed_image.base64}`}
-                    alt="Processed"
-                    width={result.processed_image_area * 5}
-                    height={result.processed_image_area * 5}
-                    className="max-w-full object-contain rounded-lg"
-                  />
-                </div>
-                <div className="text-center md:text-left">
-                  <p className="font-bold text-lg text-gray-900 dark:text-white">
-                    Result: {result.analysis.result}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Metric: {result.analysis.metric}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Value: {result.analysis.value.toFixed(2)}
-                  </p>
-                </div>
+          {result && result.processed_image && result.analysis && (
+            <div className="flex flex-col md:flex-row items-center mt-4 space-y-4 md:space-y-0 md:space-x-4">
+              <div className="mt-4 md:mt-0">
+                <Image
+                  src={`data:image/png;base64,${result.processed_image.base64}`}
+                  alt="Processed"
+                  width={50}
+                  height={50}
+                  className="max-w-full object-contain rounded-lg"
+                />
               </div>
-            )}
+              <div className="text-center md:text-left">
+                <p className="font-bold text-lg text-gray-900 dark:text-white">
+                  Result: {result.analysis.result}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Metric: {result.analysis.metric}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Value: {result.analysis.value.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -53,7 +53,6 @@ class Image(BaseModel):
     md5_hash: str
     original_image: File
     processed_image: Optional[File] = None
-    processed_image_area: Optional[float] = None
     analysis: Optional[Analysis] = None
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(tz=pytz.timezone("Asia/Kolkata"))

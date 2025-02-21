@@ -15,7 +15,6 @@ export interface ImageData {
   user_id: string;
   original_image: FileData;
   processed_image?: FileData;
-  processed_image_area?: number;
   analysis?: Analysis;
   created_at: string;
 }

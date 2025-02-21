@@ -159,16 +159,8 @@ export default function Gallery() {
                   <Image
                     src={`data:image/png;base64,${img.processed_image.base64}`}
                     alt="Processed"
-                    width={
-                      img.processed_image_area
-                        ? img.processed_image_area * 5.5
-                        : 250
-                    }
-                    height={
-                      img.processed_image_area
-                        ? img.processed_image_area * 5.5
-                        : 250
-                    }
+                    width={50}
+                    height={50}
                     className="object-contain rounded-lg mb-4 md:mb-0"
                   />
                 ) : (
