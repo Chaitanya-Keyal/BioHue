@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
+import pytz
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from pydantic import BaseModel, Field
@@ -21,13 +22,17 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(tz=pytz.timezone("Asia/Kolkata"))
+    )
 
 
 class Session(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
     username: str
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(tz=pytz.timezone("Asia/Kolkata"))
+    )
 
 
 class Analysis(BaseModel):
@@ -50,4 +55,6 @@ class Image(BaseModel):
     processed_image: Optional[File] = None
     processed_image_area: Optional[float] = None
     analysis: Optional[Analysis] = None
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(tz=pytz.timezone("Asia/Kolkata"))
+    )

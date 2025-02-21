@@ -2,7 +2,6 @@ import base64
 import hashlib
 import io
 import traceback
-from datetime import datetime
 from typing import List
 
 import cv2
@@ -85,7 +84,6 @@ async def upload_image(
             processed_image=File(_id=str(processed_image_id)),
             processed_image_area=area,
             analysis=analysis,
-            created_at=datetime.now(),
         )
 
         await images_collection.insert_one(
