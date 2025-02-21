@@ -71,7 +71,12 @@ async def upload_image(
             f"processed_{image.filename}", region_buffer.tobytes()
         )
 
-        analysis = Analysis(substrate=substrate, value=value, result=result)
+        analysis = Analysis(
+            substrate=substrate,
+            value=value,
+            result=result,
+            metric=SUBSTRATES_CONFIG[substrate].metric,
+        )
 
         image_data = Image(
             user_id=user.id,

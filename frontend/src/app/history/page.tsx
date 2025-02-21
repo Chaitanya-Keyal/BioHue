@@ -181,6 +181,9 @@ export default function Gallery() {
                       Result: {img.analysis.result}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Metric: {img.analysis.metric}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Value: {img.analysis.value.toFixed(2)}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300">

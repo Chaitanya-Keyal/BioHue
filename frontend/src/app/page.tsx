@@ -220,6 +220,9 @@ export default function HomePage() {
                     Result: {result.analysis.result}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Metric: {result.analysis.metric}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
                     Value: {result.analysis.value.toFixed(2)}
                   </p>
                 </div>

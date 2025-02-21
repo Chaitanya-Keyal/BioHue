@@ -31,6 +31,7 @@ class Session(BaseModel):
 
 
 class Analysis(BaseModel):
+    metric: str
     substrate: str
     value: float
     result: str

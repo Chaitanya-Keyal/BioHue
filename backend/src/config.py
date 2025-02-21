@@ -12,6 +12,7 @@ class Thresholds(BaseModel):
 
 
 class SubstrateConfig(BaseModel):
+    metric: str = Field(..., description="Metric name to be displayed")
     expression: str = Field(..., description="Mathematical expression using r, g, b")
     thresholds: Thresholds
 

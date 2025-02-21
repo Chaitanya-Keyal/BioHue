@@ -1,5 +1,6 @@
 {
   "CPRG": {
+    "metric": "R/G ratio",
     "expression": "r / g",
     "thresholds": {
       "negative": "value < 1.5",
@@ -7,6 +8,7 @@
     }
   },
   "Nitrocefin": {
+    "metric": "Hue Angle",
     "expression": "60 * (((g-b)/(r-b)) % 6)",
     "thresholds": {
       "negative": "value > 35",

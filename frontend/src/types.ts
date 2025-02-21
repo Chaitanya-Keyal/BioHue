@@ -1,5 +1,6 @@
 export interface Analysis {
   substrate: string;
+  metric: string;
   value: number;
   result: string;
 }
