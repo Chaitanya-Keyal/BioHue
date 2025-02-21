@@ -4,7 +4,7 @@ import { useToast } from "@/components/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -13,6 +13,7 @@ export default function AuthPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { user, login } = useAuth();
   const { toast } = useToast();
 
@@ -41,37 +42,40 @@ export default function AuthPage() {
       ? `${backendUrl}/api/users/login`
       : `${backendUrl}/api/users/register`;
 
-    const request = async () => {
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-          credentials: "include",
-        });
+    setLoading(true);
+    try {
+      await (async () => {
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+            credentials: "include",
+          });
 
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.detail);
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail);
+          }
+
+          login({ username });
+          toast({
+            title: isLogin ? "Login successful" : "Registration successful",
+            description: `Welcome, ${username}!`,
+            duration: 2500,
+          });
+          router.push("/");
+        } catch (err: unknown) {
+          toast({
+            title: isLogin ? "Login failed" : "Registration failed",
+            description: (err as Error).message,
+            variant: "destructive",
+          });
         }
-
-        login({ username });
-        toast({
-          title: isLogin ? "Login successful" : "Registration successful",
-          description: `Welcome, ${username}!`,
-          duration: 2500,
-        });
-        router.push("/");
-      } catch (err: unknown) {
-        toast({
-          title: isLogin ? "Login failed" : "Registration failed",
-          description: (err as Error).message,
-          variant: "destructive",
-        });
-      }
-    };
-
-    request();
+      })();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -117,9 +121,16 @@ export default function AuthPage() {
             </div>
             <Button
               type="submit"
+              disabled={loading}
               className={`w-full py-3 ${isLogin ? "bg-blue-600" : "bg-green-600"} text-white rounded-lg hover:${isLogin ? "bg-blue-700" : "bg-green-700"}`}
             >
-              {isLogin ? "Login" : "Register"}
+              {loading ? (
+                <Loader2 className="animate-spin w-6 h-6" />
+              ) : isLogin ? (
+                "Login"
+              ) : (
+                "Register"
+              )}
             </Button>
           </form>
           <div className="mt-6 text-center text-gray-700 dark:text-gray-300">
