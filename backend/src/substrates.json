@@ -2,8 +2,15 @@
   "CPRG": {
     "expression": "r / g",
     "thresholds": {
-      "negative": 1.5,
-      "positive": 2.0
+      "negative": "value < 1.5",
+      "positive": "value > 2.0"
+    }
+  },
+  "Nitrocefin": {
+    "expression": "60 * (((g-b)/(r-b)) % 6)",
+    "thresholds": {
+      "negative": "value > 35",
+      "positive": "value < 25"
     }
   }
 }

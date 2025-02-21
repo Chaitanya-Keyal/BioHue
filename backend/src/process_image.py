@@ -98,9 +98,9 @@ def compute_metric(image: cv2.typing.MatLike, expression: str) -> float:
 
 
 def classify_result(value: float, thresholds: Thresholds) -> str:
-    if value < thresholds.negative:
+    if eval(thresholds.negative, {"value": value}):
         return "Negative"
-    elif value > thresholds.positive:
+    elif eval(thresholds.positive, {"value": value}):
         return "Positive"
     else:
         return "Moderate"

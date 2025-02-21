@@ -7,8 +7,8 @@ from pydantic_settings import BaseSettings
 
 
 class Thresholds(BaseModel):
-    negative: float = Field(..., description="Threshold for negative classification")
-    positive: float = Field(..., description="Threshold for positive classification")
+    negative: str = Field(..., description="Condition for negative classification")
+    positive: str = Field(..., description="Condition for positive classification")
 
 
 class SubstrateConfig(BaseModel):
