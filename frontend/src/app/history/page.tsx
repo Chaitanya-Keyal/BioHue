@@ -186,7 +186,10 @@ export default function Gallery() {
               </div>
 
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Uploaded: {new Date(img.created_at).toLocaleString()}
+                Uploaded:{" "}
+                {new Date(
+                  new Date(img.created_at).getTime() + 5.5 * 60 * 60 * 1000,
+                ).toLocaleString()}
               </p>
             </CardContent>
           </Card>
