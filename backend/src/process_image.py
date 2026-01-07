@@ -104,6 +104,46 @@ def extract_prominent_region(
     return region
 
 
+def calculate_hue_angle(r: float, g: float, b: float) -> float:
+    """
+    Calculate the hue angle (0-360 degrees) from RGB values.
+
+    Args:
+        r: Red channel mean (0-255)
+        g: Green channel mean (0-255)
+        b: Blue channel mean (0-255)
+
+    Returns:
+        Hue angle in degrees (0-360)
+    """
+    # Normalize to 0-1 range
+    r_norm = r / 255.0
+    g_norm = g / 255.0
+    b_norm = b / 255.0
+
+    c_max = max(r_norm, g_norm, b_norm)
+    c_min = min(r_norm, g_norm, b_norm)
+    delta = c_max - c_min
+
+    # If delta is 0, the color is grayscale (no hue)
+    if delta == 0:
+        return 0.0
+
+    # Calculate hue based on which channel is max
+    if c_max == r_norm:
+        hue = 60.0 * (((g_norm - b_norm) / delta) % 6)
+    elif c_max == g_norm:
+        hue = 60.0 * (((b_norm - r_norm) / delta) + 2)
+    else:  # c_max == b_norm
+        hue = 60.0 * (((r_norm - g_norm) / delta) + 4)
+
+    # Ensure hue is in 0-360 range
+    if hue < 0:
+        hue += 360.0
+
+    return hue
+
+
 def compute_metric(image: cv2.typing.MatLike, expression: str) -> float:
     image = image.astype(np.float32)
     b, g, r, _ = cv2.split(image)
@@ -113,10 +153,19 @@ def compute_metric(image: cv2.typing.MatLike, expression: str) -> float:
     b = np.where(b == 0, 1, b)
     r = np.where(r == 0, 1, r)
 
+    r_mean = float(np.mean(r))
+    g_mean = float(np.mean(g))
+    b_mean = float(np.mean(b))
+
     return float(
         eval(
             expression.strip().lower(),
-            {"r": np.mean(r), "g": np.mean(g), "b": np.mean(b)},
+            {
+                "r": r_mean,
+                "g": g_mean,
+                "b": b_mean,
+                "hue_angle": lambda r, g, b: calculate_hue_angle(r, g, b),
+            },
         )
     )
 
@@ -126,5 +175,7 @@ def classify_result(value: float, thresholds: Thresholds) -> str:
         return "Negative"
     elif eval(thresholds.positive, {"value": value}):
         return "Positive"
-    else:
+    elif thresholds.moderate and eval(thresholds.moderate, {"value": value}):
         return "Moderate"
+    else:
+        return "Invalid"

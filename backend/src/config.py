@@ -9,6 +9,9 @@ from pydantic_settings import BaseSettings
 class Thresholds(BaseModel):
     negative: str = Field(..., description="Condition for negative classification")
     positive: str = Field(..., description="Condition for positive classification")
+    moderate: str | None = Field(
+        None, description="Optional condition for moderate/intermediate values"
+    )
 
 
 class SubstrateConfig(BaseModel):
