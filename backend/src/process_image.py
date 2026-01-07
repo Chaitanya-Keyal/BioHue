@@ -15,7 +15,7 @@ def extract_prominent_region(
     the average non-glare color, and returns a circular crop.
 
     The function:
-      1. Detects the most saturated region.
+      1. Detects colored regions using both saturation and LAB color deviation (works for vivid and pastel colors).
       2. Extracts its bounding box.
       3. Replaces glare pixels (where brightness exceeds glare_thresh) with the average color
          computed from non-glare pixels.
@@ -39,11 +39,40 @@ def extract_prominent_region(
 
     h, w, _ = img.shape
 
-    # Convert image to HSV color space
+    # Convert image to HSV and LAB color spaces for better detection
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+
     s_channel = hsv[:, :, 1]
+    l_channel = lab[:, :, 0]
+    a_channel = lab[:, :, 1]
+    b_channel = lab[:, :, 2]
+
+    # Method 1: Detect highly saturated colors
     s_blur = cv2.GaussianBlur(s_channel, (5, 5), 0)
-    _, mask = cv2.threshold(s_blur, saturation_thresh, 255, cv2.THRESH_BINARY)
+    _, saturated_mask = cv2.threshold(s_blur, saturation_thresh, 255, cv2.THRESH_BINARY)
+
+    # Method 2: Detect color deviation in LAB space (catches pastel colors)
+    # Any pixel that deviates from neutral gray (128, 128 in a*, b*)
+    a_dev = np.abs(a_channel.astype(np.float32) - 128)
+    b_dev = np.abs(b_channel.astype(np.float32) - 128)
+    color_deviation = np.sqrt(a_dev**2 + b_dev**2).astype(np.uint8)
+
+    # Lower threshold to catch subtle colors like light pink
+    _, deviation_mask = cv2.threshold(color_deviation, 8, 255, cv2.THRESH_BINARY)
+
+    # Blur to make it more robust
+    deviation_mask = cv2.GaussianBlur(deviation_mask, (5, 5), 0)
+    _, deviation_mask = cv2.threshold(deviation_mask, 1, 255, cv2.THRESH_BINARY)
+
+    # Exclude very dark or very bright (white) regions
+    _, brightness_mask = cv2.threshold(l_channel, 40, 255, cv2.THRESH_BINARY)
+    _, not_too_bright = cv2.threshold(l_channel, 240, 255, cv2.THRESH_BINARY_INV)
+    valid_brightness = cv2.bitwise_and(brightness_mask, not_too_bright)
+
+    # Combine all methods
+    deviation_with_brightness = cv2.bitwise_and(deviation_mask, valid_brightness)
+    mask = cv2.bitwise_or(saturated_mask, deviation_with_brightness)
 
     # Clean up the mask with morphological operations
     kernel = cv2.getStructuringElement(
@@ -75,12 +104,16 @@ def extract_prominent_region(
     x, y, w_box, h_box = cv2.boundingRect(largest_contour)
     region = img_with_alpha[y : y + h_box, x : x + w_box].copy()
 
-    # Glare removal:
+    # Glare removal (only for bright specular highlights, not light colors):
     # Convert the region's RGB channels (ignoring alpha) to HSV for brightness inspection
     region_rgb = region[:, :, :3]
     region_hsv = cv2.cvtColor(region_rgb, cv2.COLOR_BGR2HSV)
     v_channel = region_hsv[:, :, 2]
-    glare_mask = v_channel >= glare_thresh
+    s_channel = region_hsv[:, :, 1]
+
+    # Only treat as glare if BOTH very bright AND very low saturation (white/specular)
+    # This prevents treating light colored pixels as glare
+    glare_mask = (v_channel >= glare_thresh) & (s_channel < 30)
 
     # Compute the average color of non-glare pixels
     non_glare_pixels = region_rgb[~glare_mask]
@@ -104,6 +137,46 @@ def extract_prominent_region(
     return region
 
 
+def calculate_hue_angle(r: float, g: float, b: float) -> float:
+    """
+    Calculate the hue angle (0-360 degrees) from RGB values.
+
+    Args:
+        r: Red channel mean (0-255)
+        g: Green channel mean (0-255)
+        b: Blue channel mean (0-255)
+
+    Returns:
+        Hue angle in degrees (0-360)
+    """
+    # Normalize to 0-1 range
+    r_norm = r / 255.0
+    g_norm = g / 255.0
+    b_norm = b / 255.0
+
+    c_max = max(r_norm, g_norm, b_norm)
+    c_min = min(r_norm, g_norm, b_norm)
+    delta = c_max - c_min
+
+    # If delta is 0, the color is grayscale (no hue)
+    if delta == 0:
+        return 0.0
+
+    # Calculate hue based on which channel is max
+    if c_max == r_norm:
+        hue = 60.0 * (((g_norm - b_norm) / delta) % 6)
+    elif c_max == g_norm:
+        hue = 60.0 * (((b_norm - r_norm) / delta) + 2)
+    else:  # c_max == b_norm
+        hue = 60.0 * (((r_norm - g_norm) / delta) + 4)
+
+    # Ensure hue is in 0-360 range
+    if hue < 0:
+        hue += 360.0
+
+    return hue
+
+
 def compute_metric(image: cv2.typing.MatLike, expression: str) -> float:
     image = image.astype(np.float32)
     b, g, r, _ = cv2.split(image)
@@ -113,10 +186,19 @@ def compute_metric(image: cv2.typing.MatLike, expression: str) -> float:
     b = np.where(b == 0, 1, b)
     r = np.where(r == 0, 1, r)
 
+    r_mean = float(np.mean(r))
+    g_mean = float(np.mean(g))
+    b_mean = float(np.mean(b))
+
     return float(
         eval(
             expression.strip().lower(),
-            {"r": np.mean(r), "g": np.mean(g), "b": np.mean(b)},
+            {
+                "r": r_mean,
+                "g": g_mean,
+                "b": b_mean,
+                "hue_angle": lambda r, g, b: calculate_hue_angle(r, g, b),
+            },
         )
     )
 
@@ -126,5 +208,7 @@ def classify_result(value: float, thresholds: Thresholds) -> str:
         return "Negative"
     elif eval(thresholds.positive, {"value": value}):
         return "Positive"
-    else:
+    elif thresholds.moderate and eval(thresholds.moderate, {"value": value}):
         return "Moderate"
+    else:
+        return "Invalid"

@@ -4,15 +4,26 @@
     "expression": "r / g",
     "thresholds": {
       "negative": "value < 1.5",
-      "positive": "value > 2.0"
+      "positive": "value > 2.0",
+      "moderate": "value >= 1.5 and value <= 2.0"
     }
   },
   "Nitrocefin": {
     "metric": "Hue Angle",
-    "expression": "60 * (((g-b)/(r-b)) % 6)",
+    "expression": "hue_angle(r, g, b)",
     "thresholds": {
       "negative": "value > 35",
-      "positive": "value < 25"
+      "positive": "value < 25",
+      "moderate": "value >= 25 and value <= 35"
+    }
+  },
+  "Resazurin": {
+    "metric": "Hue Angle",
+    "expression": "hue_angle(r, g, b)",
+    "thresholds": {
+      "negative": "value >= 240 and value < 290",
+      "positive": "value >= 310 and value <= 355",
+      "moderate": "value >= 290 and value < 310"
     }
   }
 }
