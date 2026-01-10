@@ -58,16 +58,16 @@ def extract_prominent_region(
     b_dev = np.abs(b_channel.astype(np.float32) - 128)
     color_deviation = np.sqrt(a_dev**2 + b_dev**2).astype(np.uint8)
 
-    # Lower threshold to catch subtle colors like light pink
-    _, deviation_mask = cv2.threshold(color_deviation, 8, 255, cv2.THRESH_BINARY)
+    # Threshold to catch pastel colors but not slight background tints
+    _, deviation_mask = cv2.threshold(color_deviation, 15, 255, cv2.THRESH_BINARY)
 
     # Blur to make it more robust
     deviation_mask = cv2.GaussianBlur(deviation_mask, (5, 5), 0)
     _, deviation_mask = cv2.threshold(deviation_mask, 1, 255, cv2.THRESH_BINARY)
 
-    # Exclude very dark or very bright (white) regions
+    # Exclude very dark or very bright (white/near-white) regions
     _, brightness_mask = cv2.threshold(l_channel, 40, 255, cv2.THRESH_BINARY)
-    _, not_too_bright = cv2.threshold(l_channel, 240, 255, cv2.THRESH_BINARY_INV)
+    _, not_too_bright = cv2.threshold(l_channel, 220, 255, cv2.THRESH_BINARY_INV)
     valid_brightness = cv2.bitwise_and(brightness_mask, not_too_bright)
 
     # Combine all methods
