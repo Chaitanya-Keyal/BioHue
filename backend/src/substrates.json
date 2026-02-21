@@ -25,5 +25,14 @@
       "positive": "value >= 310 or value <= 10",
       "moderate": "290 <= value < 310"
     }
+  },
+  "Au NP - R hue": {
+    "metric": "R component",
+    "expression": "r",
+    "thresholds": {
+      "negative": "value > 115",
+      "positive": "value < 110",
+      "moderate": "110 <= value <= 115"
+    }
   }
 }
